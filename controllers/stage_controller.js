@@ -1,29 +1,36 @@
 // DEPENDENCIES
-const stage = require('express').Router()
+const stages = require('express').Router()
 const db = require('../models')
-const stage = require('../models/stage')
-const { Stage } = db 
+const { Stage, Event } = db 
+const { Op } = require('sequelize')
 
 // FIND ALL STAGES
-stage.get('/', async (req, res) => {
+stages.get('/', async (req, res) => {
     try {
-        const foundStage = await Event.findAll({
-            order: [ ['avaliable_start_time', 'ASC'] ],
+        const foundStages = await Stage.findAll({
             where: {
-                name: { [Op.like]:`%${req.query.name ? req.query.name: ''}%`}
+                stage_name: { [Op.like]: `%${req.query.stage_name ? req.query.stage_name : ''}%` }
             }
         })
-        res.status(200).json(foundStage)
+        res.status(200).json(foundStages)
     } catch (error) {
         res.status(500).json(error)
     }
 })
 
-// FIND A SPECIFIC EVENT
-stage.get('/:id', async (req, res) => {
+// FIND A SPECIFIC STAGE
+stages.get('/:name', async (req, res) => {
     try {
         const foundStage = await Stage.findOne({
-            where: { event_id: req.params.id }
+            where: { stage_name: req.params.name },
+            include:{ 
+                model: Event, 
+                as: "events",
+                through: { attributes: [] }
+            },
+            order: [
+                [{ model: Event, as: "events" }, 'date', 'ASC'],
+            ]
         })
         res.status(200).json(foundStage)
     } catch (error) {
@@ -31,12 +38,12 @@ stage.get('/:id', async (req, res) => {
     }
 })
 
-// CREATE A EVENT
-stage.post('/', async (req, res) => {
+// CREATE A STAGE
+stages.post('/', async (req, res) => {
     try {
         const newStage = await Stage.create(req.body)
         res.status(200).json({
-            message: 'Band will be played at this stage',
+            message: 'Successfully inserted a new stage',
             data: newStage
         })
     } catch(err) {
@@ -44,23 +51,36 @@ stage.post('/', async (req, res) => {
     }
 })
 
-// UPDATE A EVENT
-stage.put('/:id', async (req, res) => {
+// UPDATE A STAGE
+stages.put('/:id', async (req, res) => {
     try {
-        const updatedStage = await Event.update(req.body, {
+        const updatedStages = await Stage.update(req.body, {
             where: {
-                band_id: req.params.id
+                stage_id: req.params.id
             }
         })
         res.status(200).json({
-            message: `Successfully updated ${updatedStage} `
+            message: `Successfully updated ${updatedStages} stage(s)`
         })
     } catch(err) {
         res.status(500).json(err)
     }
 })
 
-
+// DELETE A STAGE
+stages.delete('/:id', async (req, res) => {
+    try {
+        const deletedStages = await Stage.destroy({
+            where: {
+                stage_id: req.params.id
+            }
+        })
+        res.status(200).json({
+            message: `Successfully deleted ${deletedStages} stage(s)`
+        })
+    } catch(err) {
+        res.status(500).json(err)
+    }
+})
 
 // EXPORT
-module.exports = stage
